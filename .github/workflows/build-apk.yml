@@ -8,12 +8,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ComanderoCocina
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -33,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ComanderoCocina-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ComanderoCocina/app/build/outputs/apk/debug/app-debug.apk
