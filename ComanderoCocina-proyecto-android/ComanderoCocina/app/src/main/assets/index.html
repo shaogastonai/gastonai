@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Cocina · La Parrilla del Valle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1c1815;
+    --bg-rail: #14110f;
+    --paper: #f4ede0;
+    --paper-shadow: rgba(0,0,0,0.35);
+    --ink: #2a2118;
+    --ink-soft: #6b5f4f;
+    --amber: #d9822b;
+    --amber-deep: #b8611a;
+    --red-urgent: #c0432e;
+    --blue-curso: #3b7a8a;
+    --green-done: #5c7a4a;
+    --line: rgba(244,237,224,0.08);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg); font-family:'IBM Plex Mono',monospace; color:var(--paper); overflow:hidden; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 24px; background:var(--bg-rail);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand h1{
+    font-family:'Bebas Neue',sans-serif; letter-spacing:2px;
+    font-size:28px; margin:0; color:var(--paper);
+  }
+  .brand span{ font-size:12px; color:var(--amber); letter-spacing:3px; }
+  .status{ display:flex; align-items:center; gap:16px; font-size:12px; color:var(--ink-soft); }
+  .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .dot.ok{ background:#6fbf73; box-shadow:0 0 6px #6fbf73; }
+  .dot.bad{ background:var(--red-urgent); box-shadow:0 0 6px var(--red-urgent); }
+  .clock{ font-variant-numeric: tabular-nums; color:var(--paper); font-size:14px; }
+  .cfg-btn{
+    background:transparent; border:1px solid var(--line); color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
+    padding:6px 10px; border-radius:4px; cursor:pointer;
+  }
+  .cfg-btn:hover{ color:var(--paper); border-color:var(--amber); }
+
+  .tabs{ display:flex; gap:2px; background:var(--line); padding:2px; border-radius:6px; }
+  .tab-btn{
+    background:transparent; border:none; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:.5px; padding:6px 14px; border-radius:4px; cursor:pointer;
+  }
+  .tab-btn.active{ background:var(--amber); color:#1c1815; font-weight:700; }
+
+  .sound-btn{
+    background:var(--red-urgent); border:none; color:#fff; font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px; font-weight:700; letter-spacing:.5px; padding:7px 12px; border-radius:5px;
+    cursor:pointer; animation: pulse 1.4s infinite;
+  }
+  .sound-btn.on{ background:var(--bg-rail); border:1px solid var(--line); color:var(--ink-soft); animation:none; cursor:default; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+
+  .view{ height:calc(100% - 61px); overflow-y:auto; }
+  .view.hidden{ display:none; }
+
+  .menu-wrap{ max-width:820px; margin:0 auto; padding:20px 24px 60px; }
+  .menu-hint{ font-size:12px; color:var(--ink-soft); margin-bottom:18px; line-height:1.5; }
+  .menu-row{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    background:var(--bg-rail); border:1px solid var(--line); border-radius:8px;
+    padding:14px 18px; margin-bottom:10px;
+  }
+  .menu-row.off{ opacity:.55; }
+  .menu-info{ min-width:0; }
+  .menu-name{ font-weight:700; font-size:15px; }
+  .menu-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+  .menu-cat{ display:inline-block; background:var(--line); padding:1px 7px; border-radius:3px; margin-right:6px; }
+  .menu-sub{ font-size:11px; color:var(--amber); margin-top:4px; }
+
+  .switch{ position:relative; width:52px; height:28px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{
+    position:absolute; cursor:pointer; inset:0; background:var(--red-urgent);
+    border-radius:20px; transition:.2s;
+  }
+  .slider:before{
+    content:""; position:absolute; height:22px; width:22px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s;
+  }
+  input:checked + .slider{ background:var(--green-done); }
+  input:checked + .slider:before{ transform: translateX(24px); }
+
+  .board{
+    display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1px;
+    background:var(--line); height:calc(100% - 61px);
+  }
+  .col{ background:var(--bg); display:flex; flex-direction:column; min-width:0; }
+  .col-head{
+    padding:16px 20px 10px; display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
+  }
+  .col-head h2{
+    font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:1.5px; margin:0;
+  }
+  .col[data-k="nuevo"] .col-head h2{ color: var(--red-urgent); }
+  .col[data-k="en_curso"] .col-head h2{ color: var(--blue-curso); }
+  .col[data-k="entregado"] .col-head h2{ color: var(--green-done); }
+  .count{
+    font-size:12px; background:var(--line); padding:2px 9px; border-radius:20px; color:var(--paper);
+  }
+  .tickets{ flex:1; overflow-y:auto; padding: 4px 16px 20px; }
+  .empty{
+    color:var(--ink-soft); font-size:12px; text-align:center; padding:40px 10px;
+    border:1px dashed var(--line); border-radius:6px; margin-top:10px;
+  }
+
+  .ticket{
+    background:var(--paper); color:var(--ink); border-radius:2px;
+    margin-bottom:14px; position:relative; box-shadow: 0 6px 14px var(--paper-shadow);
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 100%,
+      95% 96%, 90% 100%, 85% 96%, 80% 100%, 75% 96%, 70% 100%, 65% 96%,
+      60% 100%, 55% 96%, 50% 100%, 45% 96%, 40% 100%, 35% 96%, 30% 100%,
+      25% 96%, 20% 100%, 15% 96%, 10% 100%, 5% 96%, 0% 100%
+    );
+    padding: 14px 16px 22px;
+    animation: dropin .28s ease;
+  }
+  @keyframes dropin{ from{ opacity:0; transform: translateY(-6px);} to{opacity:1; transform:translateY(0);} }
+
+  .ticket-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .cliente{ font-weight:700; font-size:14.5px; line-height:1.2; }
+  .telefono{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .elapsed{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:3px; white-space:nowrap; }
+  .elapsed.fresh{ background:#e4ecd8; color:#41562f; }
+  .elapsed.warn{ background:#f4e2c4; color:#8a5a13; }
+  .elapsed.hot{ background:#f2d0c9; color:#8f2c1a; }
+
+  .badge{
+    display:inline-block; font-size:10.5px; letter-spacing:.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; text-transform:uppercase; margin-bottom:8px;
+  }
+  .badge.recoge{ background:#dfe6e2; color:#2f5246; }
+  .badge.domicilio{ background:#e3dcf0; color:#4a3878; }
+  .direccion{ font-size:11.5px; color:var(--ink-soft); margin:-4px 0 8px; }
+
+  .items{ font-size:13px; line-height:1.55; border-top:1px dashed rgba(42,33,24,0.25); padding-top:8px; }
+  .notas{
+    margin-top:8px; font-size:12px; background:#fbeedd; color:#8a5a13;
+    padding:6px 8px; border-radius:3px; font-style:italic;
+  }
+  .canal{ font-size:10px; color:var(--ink-soft); letter-spacing:1px; margin-top:10px; text-transform:uppercase; }
+
+  .advance{
+    width:100%; margin-top:12px; padding:10px; border:none; border-radius:4px;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12.5px; letter-spacing:.5px;
+    cursor:pointer; text-transform:uppercase; transition: transform .1s ease;
+  }
+  .advance:active{ transform: scale(0.97); }
+  .col[data-k="nuevo"] .advance{ background:var(--red-urgent); color:#fff; }
+  .col[data-k="en_curso"] .advance{ background:var(--blue-curso); color:#fff; }
+  .col[data-k="entregado"] .advance{ background:transparent; border:1px solid rgba(42,33,24,0.25); color:var(--ink-soft); cursor:default; }
+
+  /* config modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+    align-items:center; justify-content:center; z-index:50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--bg-rail); border:1px solid var(--line); border-radius:8px;
+    padding:22px; width:320px; color:var(--paper);
+  }
+  .modal h3{ font-family:'Bebas Neue',sans-serif; letter-spacing:1px; margin:0 0 14px; font-size:18px; color:var(--amber); }
+  .modal p{ font-size:12px; color:var(--ink-soft); line-height:1.5; margin-bottom:14px; }
+  .modal button{
+    width:100%; padding:10px; background:var(--amber); border:none; border-radius:4px;
+    color:#1c1815; font-weight:700; cursor:pointer; font-family:'IBM Plex Mono',monospace;
+  }
+
+  /* estado del restaurante */
+  .closed-banner{
+    display:none; background:var(--red-urgent); color:#fff; text-align:center;
+    padding:10px 16px; font-size:13px; font-weight:700; letter-spacing:.5px;
+  }
+  .closed-banner.show{ display:block; }
+
+  .status-card{
+    max-width:820px; margin:0 auto 24px; background:var(--bg-rail); border:1px solid var(--line);
+    border-radius:8px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between;
+    gap:16px;
+  }
+  .status-card-info h3{ font-family:'Bebas Neue',sans-serif; letter-spacing:1px; font-size:18px; margin:0 0 4px; }
+  .status-card-info p{ font-size:11.5px; color:var(--ink-soft); margin:0; line-height:1.5; max-width:420px; }
+  .status-switch{ position:relative; width:64px; height:34px; flex-shrink:0; }
+  .status-switch input{ opacity:0; width:0; height:0; }
+  .status-slider{
+    position:absolute; cursor:pointer; inset:0; background:var(--red-urgent);
+    border-radius:20px; transition:.2s;
+  }
+  .status-slider:before{
+    content:""; position:absolute; height:26px; width:26px; left:4px; top:4px;
+    background:#fff; border-radius:50%; transition:.2s;
+  }
+  input:checked + .status-slider{ background:var(--green-done); }
+  input:checked + .status-slider:before{ transform: translateX(30px); }
+  .status-label{ font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-top:8px; text-align:center; }
+  .motivo-input{
+    margin-top:12px; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:6px;
+    color:var(--paper); padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+  }
+  .motivo-input::placeholder{ color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>La Parrilla del Valle</h1>
+    <span>· COCINA</span>
+  </div>
+  <div class="status">
+    <button class="sound-btn" id="soundBtn">🔊 Activar sonido</button>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabCocinaBtn">Cocina</button>
+      <button class="tab-btn" id="tabMenuBtn">Menú</button>
+    </div>
+    <span class="clock" id="clock">--:--:--</span>
+    <span id="connLabel"><span class="dot bad" id="connDot"></span>conectando…</span>
+    <button class="cfg-btn" id="cfgBtn">ⓘ AYUDA</button>
+  </div>
+</div>
+
+<div class="closed-banner" id="closedBanner">⛔ RESTAURANTE CERRADO — Sofi no está tomando pedidos ni reservaciones</div>
+
+<div class="view" id="viewCocina">
+  <div class="board">
+    <div class="col" data-k="nuevo">
+      <div class="col-head"><h2>Nuevos</h2><span class="count" id="count-nuevo">0</span></div>
+      <div class="tickets" id="col-nuevo"></div>
+    </div>
+    <div class="col" data-k="en_curso">
+      <div class="col-head"><h2>En preparación</h2><span class="count" id="count-en_curso">0</span></div>
+      <div class="tickets" id="col-en_curso"></div>
+    </div>
+    <div class="col" data-k="entregado">
+      <div class="col-head"><h2>Entregados</h2><span class="count" id="count-entregado">0</span></div>
+      <div class="tickets" id="col-entregado"></div>
+    </div>
+  </div>
+</div>
+
+<div class="view hidden" id="viewMenu">
+  <div class="menu-wrap">
+    <div class="status-card">
+      <div class="status-card-info">
+        <h3>Estado del restaurante</h3>
+        <p>Cuando está apagado, Sofi avisa a los clientes que el restaurante está cerrado y no toma pedidos ni reservaciones, sin importar el horario configurado.</p>
+        <input type="text" class="motivo-input" id="motivoInput" placeholder="Motivo opcional (ej. Vacaciones, Cerrado por mantenimiento)">
+      </div>
+      <div>
+        <label class="status-switch">
+          <input type="checkbox" id="abiertoToggle">
+          <span class="status-slider"></span>
+        </label>
+        <div class="status-label" id="abiertoLabel">Abierto</div>
+      </div>
+    </div>
+    <p class="menu-hint">Apaga un platillo cuando se agote — Sofi deja de ofrecerlo en la siguiente llamada automáticamente. Vuelve a encenderlo cuando esté disponible de nuevo.</p>
+    <div id="menuList"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Tablero de cocina</h3>
+    <p>Se actualiza solo cada 4 segundos leyendo la tabla <b>pedidos</b> de Supabase. Toca el botón de color en cada ticket para pasarlo a la siguiente columna. Toca "Activar sonido" una vez al iniciar el turno — de ahí en adelante, cada pedido nuevo suena un timbre y se anuncia en voz alta, sin que nadie tenga que leer la pantalla.</p>
+    <button id="closeModal">Entendido</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://nkcqjeajwqboyjfstkyv.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rY3FqZWFqd3Fib3lqZnN0a3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2ODI4NDgsImV4cCI6MjEwMjI1ODg0OH0.-pCa4Eie0maoOp3RTfSHvcxjNgBFksS_wc56ErAxVRs";
+const REST = SUPABASE_URL + "/rest/v1/pedidos";
+const HEADERS = {
+  "apikey": ANON_KEY,
+  "Authorization": "Bearer " + ANON_KEY,
+  "Content-Type": "application/json"
+};
+
+const NEXT_STAGE = { nuevo: "en_curso", en_curso: "entregado" };
+const STAGE_LABEL = { nuevo: "Empezar a preparar", en_curso: "Marcar entregado", entregado: "Completado" };
+
+function fmtElapsed(createdAt){
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const mins = Math.max(0, Math.floor(diffMs/60000));
+  let cls = "fresh";
+  if (mins >= 20) cls = "hot";
+  else if (mins >= 10) cls = "warn";
+  return { text: mins + " min", cls };
+}
+
+function ticketHTML(p){
+  const el = fmtElapsed(p.created_at);
+  const isDomicilio = p.tipo_entrega === "domicilio";
+  const items = (p.items || "").split(",").map(i => i.trim()).filter(Boolean);
+  const nextBtn = p.estado === "entregado"
+    ? `<button class="advance" disabled>${STAGE_LABEL[p.estado]}</button>`
+    : `<button class="advance" data-id="${p.id}" data-next="${NEXT_STAGE[p.estado]}">${STAGE_LABEL[p.estado]} →</button>`;
+
+  return `
+    <div class="ticket">
+      <div class="ticket-top">
+        <div>
+          <div class="cliente">${p.cliente_nombre || "Sin nombre"}</div>
+          <div class="telefono">${p.cliente_telefono || ""}</div>
+        </div>
+        <div class="elapsed ${el.cls}">${el.text}</div>
+      </div>
+      <span class="badge ${isDomicilio ? "domicilio" : "recoge"}">${isDomicilio ? "Domicilio" : "Recoge en tienda"}</span>
+      ${isDomicilio && p.direccion ? `<div class="direccion">${p.direccion}</div>` : ""}
+      <div class="items">${items.map(i => "· " + i).join("<br>") || "Sin detalle"}</div>
+      ${p.notas ? `<div class="notas">"${p.notas}"</div>` : ""}
+      <div class="canal">Canal: ${p.canal || "voz"}</div>
+      ${nextBtn}
+    </div>
+  `;
+}
+
+// ---- Alerta sonora + voz que "canta" el pedido ----
+let audioUnlocked = false;
+let audioCtx = null;
+let seenNuevoIds = new Set();
+let firstLoadDone = false;
+
+function unlockAudio(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // "Despierta" el motor de voz con una frase silenciosa, requerido por Chrome/Safari.
+  const warmup = new SpeechSynthesisUtterance(" ");
+  warmup.volume = 0;
+  window.speechSynthesis.speak(warmup);
+  audioUnlocked = true;
+  const btn = document.getElementById("soundBtn");
+  btn.textContent = "🔊 Sonido activo";
+  btn.classList.add("on");
+}
+document.getElementById("soundBtn").addEventListener("click", unlockAudio);
+
+function playChime(){
+  if (!audioUnlocked || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  [880, 1175].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + i*0.22);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + i*0.22 + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + i*0.22 + 0.35);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now + i*0.22);
+    osc.stop(now + i*0.22 + 0.4);
+  });
+}
+
+function speakOrder(p){
+  if (!audioUnlocked) return;
+  const items = (p.items || "sin detalle").trim();
+  const entrega = p.tipo_entrega === "domicilio" ? "a domicilio" : "para recoger";
+  let text = `Nuevo pedido ${entrega}: ${items}.`;
+  if (p.notas) text += ` Nota: ${p.notas}.`;
+  if (p.cliente_nombre) text += ` Cliente: ${p.cliente_nombre}.`;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "es-MX";
+  utter.rate = 0.98;
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("es"));
+  if (esVoice) utter.voice = esVoice;
+  window.speechSynthesis.speak(utter);
+}
+
+function checkForNewOrders(pedidos){
+  const currentNuevoIds = pedidos.filter(p => p.estado === "nuevo").map(p => p.id);
+  if (!firstLoadDone){
+    seenNuevoIds = new Set(currentNuevoIds);
+    firstLoadDone = true;
+    return;
+  }
+  const nuevos = pedidos.filter(p => p.estado === "nuevo" && !seenNuevoIds.has(p.id));
+  if (nuevos.length > 0){
+    playChime();
+    nuevos.forEach((p, i) => setTimeout(() => speakOrder(p), 600 + i * 4000));
+  }
+  currentNuevoIds.forEach(id => seenNuevoIds.add(id));
+}
+
+function render(pedidos){
+  const groups = { nuevo: [], en_curso: [], entregado: [] };
+  pedidos.forEach(p => { if (groups[p.estado]) groups[p.estado].push(p); });
+
+  Object.keys(groups).forEach(k => {
+    const container = document.getElementById("col-" + k);
+    document.getElementById("count-" + k).textContent = groups[k].length;
+    if (groups[k].length === 0){
+      container.innerHTML = `<div class="empty">Sin pedidos</div>`;
+    } else {
+      container.innerHTML = groups[k]
+        .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(ticketHTML).join("");
+    }
+  });
+
+  document.querySelectorAll(".advance[data-id]").forEach(btn => {
+    btn.addEventListener("click", () => updateEstado(btn.dataset.id, btn.dataset.next));
+  });
+}
+
+async function fetchPedidos(){
+  try{
+    const res = await fetch(REST + "?select=*&order=created_at.desc&limit=100", { headers: HEADERS });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    setConn(true);
+    checkForNewOrders(data);
+    render(data);
+  }catch(err){
+    console.error(err);
+    setConn(false);
+  }
+}
+
+async function updateEstado(id, nextEstado){
+  try{
+    await fetch(REST + "?id=eq." + id, {
+      method: "PATCH",
+      headers: { ...HEADERS, "Prefer": "return=minimal" },
+      body: JSON.stringify({ estado: nextEstado })
+    });
+    fetchPedidos();
+  }catch(err){
+    console.error(err);
+    setConn(false);
+  }
+}
+
+const MENU_REST = SUPABASE_URL + "/rest/v1/menu";
+const CONFIG_REST = SUPABASE_URL + "/rest/v1/configuracion";
+
+async function fetchConfig(){
+  try{
+    const res = await fetch(CONFIG_REST + "?select=*&limit=1", { headers: HEADERS });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.length) return;
+    const cfg = data[0];
+    document.getElementById("abiertoToggle").checked = cfg.abierto;
+    document.getElementById("abiertoLabel").textContent = cfg.abierto ? "Abierto" : "Cerrado";
+    document.getElementById("motivoInput").value = cfg.motivo || "";
+    document.getElementById("closedBanner").classList.toggle("show", !cfg.abierto);
+  }catch(err){
+    console.error(err);
+  }
+}
+
+async function toggleAbierto(abierto){
+  try{
+    const motivo = document.getElementById("motivoInput").value.trim();
+    await fetch(CONFIG_REST + "?id=eq.1", {
+      method: "PATCH",
+      headers: { ...HEADERS, "Prefer": "return=minimal" },
+      body: JSON.stringify({ abierto, motivo: motivo || null })
+    });
+    document.getElementById("abiertoLabel").textContent = abierto ? "Abierto" : "Cerrado";
+    document.getElementById("closedBanner").classList.toggle("show", !abierto);
+  }catch(err){
+    console.error(err);
+    setConn(false);
+  }
+}
+
+document.getElementById("abiertoToggle").addEventListener("change", (e) => toggleAbierto(e.target.checked));
+
+let motivoSaveTimer = null;
+document.getElementById("motivoInput").addEventListener("input", () => {
+  clearTimeout(motivoSaveTimer);
+  motivoSaveTimer = setTimeout(() => {
+    const abierto = document.getElementById("abiertoToggle").checked;
+    toggleAbierto(abierto);
+  }, 800);
+});
+
+function menuRowHTML(item){
+  const cat = item["categoría"] ?? item.categoria ?? "—";
+  return `
+    <div class="menu-row ${item.disponible ? "" : "off"}">
+      <div class="menu-info">
+        <div class="menu-name">${item.nombre}</div>
+        <div class="menu-meta"><span class="menu-cat">${cat}</span>$${item.precio} MXN</div>
+        ${(!item.disponible && item.sustituto) ? `<div class="menu-sub">Sugerir en su lugar: ${item.sustituto}</div>` : ""}
+      </div>
+      <label class="switch">
+        <input type="checkbox" data-id="${item.id}" ${item.disponible ? "checked" : ""}>
+        <span class="slider"></span>
+      </label>
+    </div>
+  `;
+}
+
+async function fetchMenu(){
+  try{
+    const res = await fetch(MENU_REST + "?select=*", { headers: HEADERS });
+    if (!res.ok){
+      const bodyText = await res.text();
+      throw new Error("HTTP " + res.status + " — " + bodyText);
+    }
+    const data = await res.json();
+    data.sort((a,b) => ((a["categoría"]||a.categoria||"")).localeCompare(b["categoría"]||b.categoria||""));
+    setConn(true);
+    document.getElementById("menuList").innerHTML = data.map(menuRowHTML).join("");
+    document.querySelectorAll("#menuList input[type=checkbox]").forEach(chk => {
+      chk.addEventListener("change", () => toggleDisponible(chk.dataset.id, chk.checked));
+    });
+  }catch(err){
+    console.error(err);
+    setConn(false);
+  }
+}
+
+async function toggleDisponible(id, disponible){
+  try{
+    const res = await fetch(MENU_REST + "?id=eq." + id, {
+      method: "PATCH",
+      headers: { ...HEADERS, "Prefer": "return=representation" },
+      body: JSON.stringify({ disponible })
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error("HTTP " + res.status + " — " + JSON.stringify(body));
+    if (Array.isArray(body) && body.length === 0){
+      console.warn("El PATCH no afectó ninguna fila — probablemente falta la policy de UPDATE (o su WITH CHECK) en la tabla menu.");
+    }
+    fetchMenu();
+  }catch(err){
+    console.error(err);
+    setConn(false);
+  }
+}
+
+function showView(name){
+  document.getElementById("viewCocina").classList.toggle("hidden", name !== "cocina");
+  document.getElementById("viewMenu").classList.toggle("hidden", name !== "menu");
+  document.getElementById("tabCocinaBtn").classList.toggle("active", name === "cocina");
+  document.getElementById("tabMenuBtn").classList.toggle("active", name === "menu");
+  if (name === "menu") fetchMenu(); else fetchPedidos();
+}
+document.getElementById("tabCocinaBtn").addEventListener("click", () => showView("cocina"));
+document.getElementById("tabMenuBtn").addEventListener("click", () => showView("menu"));
+
+function setConn(ok){
+  document.getElementById("connDot").className = "dot " + (ok ? "ok" : "bad");
+  document.getElementById("connLabel").lastChild.textContent = ok ? "en vivo" : "sin conexión";
+}
+
+function tickClock(){
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString("es-MX", { hour12:false });
+}
+
+document.getElementById("cfgBtn").addEventListener("click", () => document.getElementById("overlay").classList.add("show"));
+document.getElementById("closeModal").addEventListener("click", () => document.getElementById("overlay").classList.remove("show"));
+
+tickClock();
+setInterval(tickClock, 1000);
+fetchConfig();
+fetchPedidos();
+setInterval(fetchPedidos, 4000);
+setInterval(fetchConfig, 10000);
+
+// Los navegadores frenan los timers cuando la pestaña queda en segundo
+// plano (para ahorrar batería). Esto fuerza un refresco inmediato apenas
+// la pestaña vuelve a estar visible o gana el foco, para no depender
+// solo del setInterval de arriba.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") fetchPedidos();
+});
+window.addEventListener("focus", fetchPedidos);
+</script>
+</body>
+</html>
