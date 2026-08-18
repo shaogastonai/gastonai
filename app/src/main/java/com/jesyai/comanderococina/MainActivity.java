@@ -27,6 +27,10 @@ public class MainActivity extends AppCompatActivity {
         );
 
         setContentView(R.layout.activity_main);
+        
+        // Permite inspeccionar el WebView desde chrome://inspect en una PC
+        // conectada por USB, para ver errores de consola y de red reales.
+        WebView.setWebContentsDebuggingEnabled(true);
 
         // 3. CONFIGURAR WEBVIEW Y COMPATIBILIDAD CON SUPABASE
         myWebView = findViewById(R.id.webView);
